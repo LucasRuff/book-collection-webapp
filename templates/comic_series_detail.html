@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block title %}{{ series.display_name }} - My Book Collection{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 20px;">
+        <div>
+            <h2>{{ series.display_name }}</h2>
+            {% if series.publisher %}
+                <p style="color: #666; font-size: 16px; margin-top: 5px;"><a href="{{ url_for('view_publisher', id=series.publisher.id) }}">{{ series.publisher.name }}</a></p>
+            {% endif %}
+            {% if series.authors %}
+                <p style="color: #444; font-size: 14px; margin-top: 5px;">
+                    <strong>Creative Team:</strong> {% for author in series.authors %}<a href="{{ url_for('view_author', id=author.id) }}">{{ author.name }}</a>{% if not loop.last %}, {% endif %}{% endfor %}
+                </p>
+            {% endif %}
+        </div>
+        <div>
+            <span class="badge badge-success" style="font-size: 14px; padding: 5px 12px;">
+                {{ series.read_count }}/{{ series.issue_count }} read
+            </span>
+        </div>
+    </div>
+    
+    {% if series.notes %}
+        <p style="color: #666; margin-bottom: 20px;">{{ series.notes }}</p>
+    {% endif %}
+    
+    <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px;">
+        <a href="{{ url_for('add_comic_issue', series_id=series.id) }}" class="btn btn-success">+ Add Issue</a>
+        <a href="{{ url_for('quick_add_issues', series_id=series.id) }}" class="btn btn-primary">Quick Add Issues</a>
+        <a href="{{ url_for('edit_comic_series', id=series.id) }}" class="btn btn-secondary">Edit Series</a>
+        <form action="{{ url_for('delete_comic_series', id=series.id) }}" method="post" style="display:inline;"
+              onsubmit="return confirm('Are you sure you want to delete this series and ALL its issues?');">
+            <button type="submit" class="btn btn-danger">Delete Series</button>
+        </form>
+    </div>
+</div>
+
+<h3 style="margin: 30px 0 20px 0;">Issues ({{ series.issue_count }})</h3>
+
+{% if series.issues %}
+    <div class="issue-list">
+        {% for issue in series.issues %}
+            <div class="author-card" style="{% if issue.is_read %}border-left: 4px solid #28a745;{% else %}border-left: 4px solid #ffc107;{% endif %}">
+                <div class="info" style="flex: 1;">
+                    <h4>
+                        #{{ issue.issue_number|string|replace('.0', '') }}
+                        {% if issue.title %} - {{ issue.title }}{% endif %}
+                        {% if issue.cover_variant %}
+                            <span style="font-size: 12px; color: #888;">({{ issue.cover_variant }})</span>
+                        {% endif %}
+                    </h4>
+                    <div style="font-size: 13px; color: #666;">
+                        {% if issue.cover_date %}<span>{{ issue.cover_date }}</span>{% endif %}
+                        {% if issue.authors %}
+                            <span>{% if issue.cover_date %}• {% endif %}{{ issue.authors_display }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="actions" style="display: flex; gap: 5px;">
+                    <form action="{{ url_for('toggle_issue_read', id=issue.id) }}" method="post" style="display:inline;">
+                        <button type="submit" class="btn btn-sm {{ 'btn-secondary' if issue.is_read else 'btn-success' }}">
+                            {{ '✓' if issue.is_read else '○' }}
+                        </button>
+                    </form>
+                    <a href="{{ url_for('edit_comic_issue', id=issue.id) }}" class="btn btn-sm btn-primary">Edit</a>
+                    <form action="{{ url_for('delete_comic_issue', id=issue.id) }}" method="post" style="display:inline;"
+                          onsubmit="return confirm('Delete this issue?');">
+                        <button type="submit" class="btn btn-sm btn-danger">×</button>
+                    </form>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="empty-state">
+        <h3>No issues yet</h3>
+        <p>Add issues to start tracking your collection!</p>
+        <br>
+        <a href="{{ url_for('add_comic_issue', series_id=series.id) }}" class="btn btn-primary">Add First Issue</a>
+        <a href="{{ url_for('quick_add_issues', series_id=series.id) }}" class="btn btn-secondary">Quick Add Multiple</a>
+    </div>
+{% endif %}
+
+<div style="margin-top: 30px;">
+    <a href="{{ url_for('comics') }}" class="btn btn-secondary">← Back to Comics</a>
+</div>
+{% endblock %}

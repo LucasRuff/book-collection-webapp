@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block title %}Publishers - My Book Collection{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+    <h2>Publishers ({{ publishers|length }})</h2>
+    <div style="display: flex; gap: 10px; align-items: center;">
+        <select onchange="window.location.href='{{ url_for('publishers') }}?sort=' + this.value" style="padding: 6px 10px; border-radius: 4px; border: 1px solid #ccc;">
+            <option value="name" {% if current_sort == 'name' %}selected{% endif %}>Sort: A-Z</option>
+            <option value="books" {% if current_sort == 'books' %}selected{% endif %}>Sort: Most Books</option>
+            <option value="comics" {% if current_sort == 'comics' %}selected{% endif %}>Sort: Most Series</option>
+            <option value="total" {% if current_sort == 'total' %}selected{% endif %}>Sort: Most Total</option>
+        </select>
+        <a href="{{ url_for('add_publisher') }}" class="btn btn-primary">+ Add Publisher</a>
+    </div>
+</div>
+
+{% if publishers %}
+    <div class="author-list">
+        {% for publisher in publishers %}
+            <div class="author-card">
+                <div class="info">
+                    <h4><a href="{{ url_for('view_publisher', id=publisher.id) }}">{{ publisher.name }}</a></h4>
+                    <span class="book-count">
+                        {%- if publisher.books %}{{ publisher.books|length }} book(s){% endif -%}
+                        {%- if publisher.books and publisher.comic_series %}, {% endif -%}
+                        {%- if publisher.comic_series %}{{ publisher.comic_series|length }} comic series{% endif -%}
+                    </span>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="empty-state">
+        <h3>No publishers yet</h3>
+        <p>Publishers will be added automatically when you add books, or you can add them manually.</p>
+        <br>
+        <a href="{{ url_for('add_publisher') }}" class="btn btn-primary">Add a Publisher</a>
+    </div>
+{% endif %}
+{% endblock %}

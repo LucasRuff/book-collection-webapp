@@ -1,0 +1,205 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }} - My Book Collection{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>{{ title }}</h2>
+    <br>
+    <form method="post">
+        {{ form.hidden_tag() }}
+        
+        <div class="form-group">
+            {{ form.name.label }}
+            {{ form.name(placeholder="e.g., The Amazing Spider-Man") }}
+            {% for error in form.name.errors %}
+                <span style="color: red; font-size: 13px;">{{ error }}</span>
+            {% endfor %}
+        </div>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+            <div class="form-group">
+                {{ form.volume.label }}
+                {{ form.volume(placeholder="e.g., 2 (for Vol. 2)") }}
+                <p class="help-text">Leave blank if not applicable</p>
+                {% for error in form.volume.errors %}
+                    <span style="color: red; font-size: 13px;">{{ error }}</span>
+                {% endfor %}
+            </div>
+            
+            <div class="form-group">
+                {{ form.start_year.label }}
+                {{ form.start_year(placeholder="e.g., 2018") }}
+                {% for error in form.start_year.errors %}
+                    <span style="color: red; font-size: 13px;">{{ error }}</span>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <div class="form-group">
+            {{ form.publisher.label }}
+            {{ form.publisher() }}
+            {% for error in form.publisher.errors %}
+                <span style="color: red; font-size: 13px;">{{ error }}</span>
+            {% endfor %}
+        </div>
+        
+        <div class="form-group">
+            {{ form.new_publisher.label }}
+            {{ form.new_publisher(placeholder="Enter new publisher name") }}
+            <p class="help-text">If the publisher isn't in the list above, enter it here.</p>
+            {% for error in form.new_publisher.errors %}
+                <span style="color: red; font-size: 13px;">{{ error }}</span>
+            {% endfor %}
+        </div>
+        
+        <div class="form-group">
+            <label>Creative Team</label>
+            <div class="author-search-container">
+                <div class="selected-authors" id="selectedAuthors">
+                    <!-- Selected authors will appear here as tags -->
+                </div>
+                <input type="text" class="author-search-input" id="authorSearch" 
+                       placeholder="Search for creators or type a new name..." autocomplete="off">
+                <div class="author-suggestions" id="authorSuggestions"></div>
+            </div>
+            <input type="hidden" name="author_ids" id="authorIds" value="">
+            <p class="help-text">Add the main creative team for this series. These will auto-populate when adding new issues.</p>
+        </div>
+        
+        <div class="form-group">
+            {{ form.notes.label }}
+            {{ form.notes(placeholder="Any notes about this series...") }}
+            {% for error in form.notes.errors %}
+                <span style="color: red; font-size: 13px;">{{ error }}</span>
+            {% endfor %}
+        </div>
+        
+        <div style="display: flex; gap: 10px;">
+            {{ form.submit(class="btn btn-primary") }}
+            <a href="{{ url_for('comics') }}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<script>
+(function() {
+    const searchInput = document.getElementById('authorSearch');
+    const suggestionsDiv = document.getElementById('authorSuggestions');
+    const selectedDiv = document.getElementById('selectedAuthors');
+    const hiddenInput = document.getElementById('authorIds');
+    
+    let selectedAuthors = {};
+    let newAuthors = [];
+    
+    // Initialize with existing authors (for edit mode)
+    {% if series and series.authors %}
+    {% for author in series.authors %}
+    selectedAuthors[{{ author.id }}] = "{{ author.name }}";
+    {% endfor %}
+    updateDisplay();
+    {% endif %}
+    
+    function updateDisplay() {
+        selectedDiv.innerHTML = '';
+        
+        for (const [id, name] of Object.entries(selectedAuthors)) {
+            const tag = document.createElement('span');
+            tag.className = 'author-tag';
+            tag.innerHTML = `${name} <button type="button" onclick="removeAuthor(${id})">&times;</button>`;
+            selectedDiv.appendChild(tag);
+        }
+        
+        newAuthors.forEach((name, idx) => {
+            const tag = document.createElement('span');
+            tag.className = 'author-tag';
+            tag.style.background = '#28a745';
+            tag.innerHTML = `${name} (new) <button type="button" onclick="removeNewAuthor(${idx})">&times;</button>`;
+            selectedDiv.appendChild(tag);
+        });
+        
+        const existingIds = Object.keys(selectedAuthors).join(',');
+        const newNames = newAuthors.join('|||');
+        hiddenInput.value = existingIds + (newNames ? ':::' + newNames : '');
+    }
+    
+    window.removeAuthor = function(id) {
+        delete selectedAuthors[id];
+        updateDisplay();
+    };
+    
+    window.removeNewAuthor = function(idx) {
+        newAuthors.splice(idx, 1);
+        updateDisplay();
+    };
+    
+    let debounceTimer;
+    searchInput.addEventListener('input', function() {
+        clearTimeout(debounceTimer);
+        const query = this.value.trim();
+        
+        if (query.length < 1) {
+            suggestionsDiv.classList.remove('show');
+            return;
+        }
+        
+        debounceTimer = setTimeout(() => {
+            fetch(`/api/authors/search?q=${encodeURIComponent(query)}`)
+                .then(r => r.json())
+                .then(authors => {
+                    suggestionsDiv.innerHTML = '';
+                    const filtered = authors.filter(a => !selectedAuthors[a.id]);
+                    
+                    if (filtered.length === 0) {
+                        suggestionsDiv.innerHTML = `<div class="author-suggestion no-results">Press Enter to add "${query}" as new creator</div>`;
+                    } else {
+                        filtered.forEach(author => {
+                            const div = document.createElement('div');
+                            div.className = 'author-suggestion';
+                            div.textContent = author.name;
+                            div.onclick = () => {
+                                selectedAuthors[author.id] = author.name;
+                                updateDisplay();
+                                searchInput.value = '';
+                                suggestionsDiv.classList.remove('show');
+                            };
+                            suggestionsDiv.appendChild(div);
+                        });
+                    }
+                    suggestionsDiv.classList.add('show');
+                });
+        }, 200);
+    });
+    
+    searchInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            const name = this.value.trim();
+            if (name && !newAuthors.includes(name)) {
+                const exists = Object.values(selectedAuthors).some(
+                    n => n.toLowerCase() === name.toLowerCase()
+                );
+                if (!exists) {
+                    newAuthors.push(name);
+                    updateDisplay();
+                }
+            }
+            this.value = '';
+            suggestionsDiv.classList.remove('show');
+        }
+    });
+    
+    document.addEventListener('click', function(e) {
+        if (!searchInput.contains(e.target) && !suggestionsDiv.contains(e.target)) {
+            suggestionsDiv.classList.remove('show');
+        }
+    });
+    
+    searchInput.addEventListener('focus', function() {
+        if (this.value.trim().length >= 1) {
+            this.dispatchEvent(new Event('input'));
+        }
+    });
+})();
+</script>
+{% endblock %}

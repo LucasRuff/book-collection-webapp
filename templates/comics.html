@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block title %}Comics - My Book Collection{% endblock %}
+
+{% block content %}
+<div class="stats">
+    <div class="stat-card">
+        <div class="number">{{ total_series }}</div>
+        <div class="label">Series</div>
+    </div>
+    <div class="stat-card">
+        <div class="number">{{ total_issues }}</div>
+        <div class="label">Total Issues</div>
+    </div>
+    <div class="stat-card">
+        <div class="number">{{ read_issues }}</div>
+        <div class="label">Issues Read</div>
+    </div>
+    <div class="stat-card">
+        <div class="number">{{ total_issues - read_issues }}</div>
+        <div class="label">To Read</div>
+    </div>
+</div>
+
+<div class="search-bar">
+    <form method="get" action="{{ url_for('comics') }}">
+        <div class="form-group">
+            <label for="query">Search</label>
+            <input type="text" id="query" name="query" placeholder="Search by series name or publisher..." 
+                   value="{{ search_query }}">
+        </div>
+        <button type="submit" class="btn btn-primary">Search</button>
+        <a href="{{ url_for('comics') }}" class="btn btn-secondary">Clear</a>
+        <a href="{{ url_for('add_comic_series') }}" class="btn btn-success">+ Add Series</a>
+    </form>
+</div>
+
+{% if series_list %}
+    <div class="book-grid">
+        {% for series in series_list %}
+            <div class="book-card {{ 'read' if series.read_count == series.issue_count and series.issue_count > 0 else 'unread' }}">
+                <h3><a href="{{ url_for('view_comic_series', id=series.id) }}">{{ series.display_name }}</a></h3>
+                {% if series.publisher %}
+                    <p class="author">{{ series.publisher.name }}</p>
+                {% endif %}
+                <div class="meta">
+                    <span>{{ series.issue_count }} issue(s)</span>
+                    {% if series.issue_count > 0 %}
+                        <span>• {{ series.read_count }}/{{ series.issue_count }} read</span>
+                    {% endif %}
+                    <br>
+                    <span style="font-size: 12px; color: #888;">{{ series.issue_numbers_display }}</span>
+                </div>
+                <div class="actions" style="margin-top: 10px;">
+                    <a href="{{ url_for('view_comic_series', id=series.id) }}" class="btn btn-sm btn-primary">View</a>
+                    <a href="{{ url_for('add_comic_issue', series_id=series.id) }}" class="btn btn-sm btn-success">+ Issue</a>
+                    <a href="{{ url_for('edit_comic_series', id=series.id) }}" class="btn btn-sm btn-secondary">Edit</a>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="empty-state">
+        <h3>No comic series found</h3>
+        <p>{% if search_query %}
+            Try adjusting your search.
+        {% else %}
+            Start tracking your comics by adding a series!
+        {% endif %}</p>
+        <br>
+        <a href="{{ url_for('add_comic_series') }}" class="btn btn-primary">Add Your First Series</a>
+    </div>
+{% endif %}
+{% endblock %}

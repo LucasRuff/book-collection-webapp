@@ -1,0 +1,246 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }} - My Book Collection{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>{{ title }}</h2>
+    <br>
+    <form method="post">
+        {{ form.hidden_tag() }}
+        
+        <div class="form-group">
+            {{ form.series.label }}
+            {{ form.series() }}
+            {% for error in form.series.errors %}
+                <span style="color: red; font-size: 13px;">{{ error }}</span>
+            {% endfor %}
+        </div>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+            <div class="form-group">
+                {{ form.issue_number.label }}
+                {{ form.issue_number(placeholder="e.g., 1, 2, 3.1") }}
+                {% for error in form.issue_number.errors %}
+                    <span style="color: red; font-size: 13px;">{{ error }}</span>
+                {% endfor %}
+            </div>
+            
+            <div class="form-group">
+                {{ form.cover_date.label }}
+                {{ form.cover_date(placeholder="e.g., January 2020") }}
+                {% for error in form.cover_date.errors %}
+                    <span style="color: red; font-size: 13px;">{{ error }}</span>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <div class="form-group">
+            {{ form.title.label }}
+            {{ form.title(placeholder="Issue title if applicable") }}
+            <p class="help-text">Some issues have story titles - leave blank if not applicable</p>
+            {% for error in form.title.errors %}
+                <span style="color: red; font-size: 13px;">{{ error }}</span>
+            {% endfor %}
+        </div>
+        
+        <div class="form-group">
+            {{ form.cover_variant.label }}
+            {{ form.cover_variant(placeholder="e.g., 1:25 variant, SDCC exclusive") }}
+            {% for error in form.cover_variant.errors %}
+                <span style="color: red; font-size: 13px;">{{ error }}</span>
+            {% endfor %}
+        </div>
+        
+        <div class="form-group">
+            <label>Creative Team</label>
+            <div class="author-search-container">
+                <div class="selected-authors" id="selectedAuthors">
+                    <!-- Selected authors will appear here as tags -->
+                </div>
+                <input type="text" class="author-search-input" id="authorSearch" 
+                       placeholder="Search for creators or type a new name..." autocomplete="off">
+                <div class="author-suggestions" id="authorSuggestions"></div>
+            </div>
+            <input type="hidden" name="author_ids" id="authorIds" value="">
+            <p class="help-text">Search existing creators or type a new name and press Enter to add.</p>
+        </div>
+        
+        <div class="form-group">
+            <label class="checkbox-group">
+                {{ form.is_read() }}
+                I have read this issue
+            </label>
+        </div>
+        
+        <div class="form-group">
+            {{ form.notes.label }}
+            {{ form.notes(placeholder="Any notes about this issue...") }}
+            {% for error in form.notes.errors %}
+                <span style="color: red; font-size: 13px;">{{ error }}</span>
+            {% endfor %}
+        </div>
+        
+        <div style="display: flex; gap: 10px;">
+            {{ form.submit(class="btn btn-primary") }}
+            <a href="{{ url_for('comics') }}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<script>
+(function() {
+    const searchInput = document.getElementById('authorSearch');
+    const suggestionsDiv = document.getElementById('authorSuggestions');
+    const selectedDiv = document.getElementById('selectedAuthors');
+    const hiddenInput = document.getElementById('authorIds');
+    const seriesSelect = document.getElementById('series');
+    
+    let selectedAuthors = {};
+    let newAuthors = [];
+    
+    // Initialize with existing authors (for edit mode)
+    {% if issue and issue.authors %}
+    {% for author in issue.authors %}
+    selectedAuthors[{{ author.id }}] = "{{ author.name }}";
+    {% endfor %}
+    updateDisplay();
+    {% else %}
+    // For new issues, load series authors if a series is pre-selected
+    if (seriesSelect && seriesSelect.value) {
+        loadSeriesAuthors(seriesSelect.value);
+    }
+    {% endif %}
+    
+    // When series changes (for new issues), load series authors
+    if (seriesSelect) {
+        seriesSelect.addEventListener('change', function() {
+            {% if not issue %}
+            // Only auto-populate for new issues, not edits
+            loadSeriesAuthors(this.value);
+            {% endif %}
+        });
+    }
+    
+    function loadSeriesAuthors(seriesId) {
+        if (!seriesId) return;
+        
+        fetch(`/api/series/${seriesId}/authors`)
+            .then(r => r.json())
+            .then(authors => {
+                // Clear existing selections
+                selectedAuthors = {};
+                newAuthors = [];
+                
+                // Add series authors
+                authors.forEach(author => {
+                    selectedAuthors[author.id] = author.name;
+                });
+                updateDisplay();
+            })
+            .catch(err => console.log('Could not load series authors:', err));
+    }
+    
+    function updateDisplay() {
+        selectedDiv.innerHTML = '';
+        
+        for (const [id, name] of Object.entries(selectedAuthors)) {
+            const tag = document.createElement('span');
+            tag.className = 'author-tag';
+            tag.innerHTML = `${name} <button type="button" onclick="removeAuthor(${id})">&times;</button>`;
+            selectedDiv.appendChild(tag);
+        }
+        
+        newAuthors.forEach((name, idx) => {
+            const tag = document.createElement('span');
+            tag.className = 'author-tag';
+            tag.style.background = '#28a745';
+            tag.innerHTML = `${name} (new) <button type="button" onclick="removeNewAuthor(${idx})">&times;</button>`;
+            selectedDiv.appendChild(tag);
+        });
+        
+        const existingIds = Object.keys(selectedAuthors).join(',');
+        const newNames = newAuthors.join('|||');
+        hiddenInput.value = existingIds + (newNames ? ':::' + newNames : '');
+    }
+    
+    window.removeAuthor = function(id) {
+        delete selectedAuthors[id];
+        updateDisplay();
+    };
+    
+    window.removeNewAuthor = function(idx) {
+        newAuthors.splice(idx, 1);
+        updateDisplay();
+    };
+    
+    let debounceTimer;
+    searchInput.addEventListener('input', function() {
+        clearTimeout(debounceTimer);
+        const query = this.value.trim();
+        
+        if (query.length < 1) {
+            suggestionsDiv.classList.remove('show');
+            return;
+        }
+        
+        debounceTimer = setTimeout(() => {
+            fetch(`/api/authors/search?q=${encodeURIComponent(query)}`)
+                .then(r => r.json())
+                .then(authors => {
+                    suggestionsDiv.innerHTML = '';
+                    const filtered = authors.filter(a => !selectedAuthors[a.id]);
+                    
+                    if (filtered.length === 0) {
+                        suggestionsDiv.innerHTML = `<div class="author-suggestion no-results">Press Enter to add "${query}" as new creator</div>`;
+                    } else {
+                        filtered.forEach(author => {
+                            const div = document.createElement('div');
+                            div.className = 'author-suggestion';
+                            div.textContent = author.name;
+                            div.onclick = () => {
+                                selectedAuthors[author.id] = author.name;
+                                updateDisplay();
+                                searchInput.value = '';
+                                suggestionsDiv.classList.remove('show');
+                            };
+                            suggestionsDiv.appendChild(div);
+                        });
+                    }
+                    suggestionsDiv.classList.add('show');
+                });
+        }, 200);
+    });
+    
+    searchInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            const name = this.value.trim();
+            if (name && !newAuthors.includes(name)) {
+                const exists = Object.values(selectedAuthors).some(
+                    n => n.toLowerCase() === name.toLowerCase()
+                );
+                if (!exists) {
+                    newAuthors.push(name);
+                    updateDisplay();
+                }
+            }
+            this.value = '';
+            suggestionsDiv.classList.remove('show');
+        }
+    });
+    
+    document.addEventListener('click', function(e) {
+        if (!searchInput.contains(e.target) && !suggestionsDiv.contains(e.target)) {
+            suggestionsDiv.classList.remove('show');
+        }
+    });
+    
+    searchInput.addEventListener('focus', function() {
+        if (this.value.trim().length >= 1) {
+            this.dispatchEvent(new Event('input'));
+        }
+    });
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,240 @@
+{% extends "base.html" %}
+
+{% block title %}My Book Collection{% endblock %}
+
+{% block content %}
+<!-- Read Next Widget -->
+<div class="read-next-widget" id="read-next-widget">
+    <h2>Read Next</h2>
+    <div class="read-next-columns">
+        <div class="read-next-column" id="queue-physical">
+            <h3>Physical</h3>
+            <div class="read-next-books"></div>
+        </div>
+        <div class="read-next-column" id="queue-ebook">
+            <h3>E-book</h3>
+            <div class="read-next-books"></div>
+        </div>
+        <div class="read-next-column" id="queue-audiobook">
+            <h3>Audiobook</h3>
+            <div class="read-next-books"></div>
+        </div>
+    </div>
+</div>
+
+<div class="stats">
+    <div class="stat-card">
+        <div class="number">{{ total_books }}</div>
+        <div class="label">Total Books</div>
+    </div>
+    <div class="stat-card">
+        <div class="number">{{ read_books }}</div>
+        <div class="label">Books Read</div>
+    </div>
+    <div class="stat-card">
+        <div class="number">{{ status_counts.get('to_read', 0) + status_counts.get('in_progress', 0) }}</div>
+        <div class="label">To Read</div>
+    </div>
+    <div class="stat-card">
+        <div class="number">{{ total_authors }}</div>
+        <div class="label">Authors</div>
+    </div>
+    <div class="stat-card">
+        <div class="number">{{ total_publishers }}</div>
+        <div class="label">Publishers</div>
+    </div>
+</div>
+
+<div class="search-bar">
+    <form method="get" action="{{ url_for('index') }}">
+        <div style="display: flex; flex-wrap: wrap; gap: 15px; align-items: flex-end;">
+            <div class="form-group" style="flex: 1; min-width: 200px; margin-bottom: 0;">
+                <label for="query">Search</label>
+                <input type="text" id="query" name="query" placeholder="Search by title, author, or publisher..." 
+                       value="{{ request.args.get('query', '') }}">
+            </div>
+            
+            <div class="form-group" style="margin-bottom: 0;">
+                <label for="status_filter">Status</label>
+                <select name="status_filter" id="status_filter" style="padding: 8px; border-radius: 5px; border: 1px solid #ddd; min-width: 150px;">
+                    <option value="">All Statuses</option>
+                    {% for code, label in status_choices %}
+                    <option value="{{ code }}" {% if code == request.args.get('status_filter') %}selected{% endif %}>
+                        {{ label }} ({{ status_counts.get(code, 0) }})
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="form-group" style="margin-bottom: 0;">
+                <label for="collection">Collection</label>
+                <select name="collection" id="collection" style="padding: 8px; border-radius: 5px; border: 1px solid #ddd;">
+                    <option value="" {% if not request.args.get('collection') %}selected{% endif %}>All</option>
+                    <option value="personal" {% if request.args.get('collection') == 'personal' %}selected{% endif %}>Personal Library</option>
+                    <option value="textbooks" {% if request.args.get('collection') == 'textbooks' %}selected{% endif %}>Textbooks</option>
+                </select>
+            </div>
+            
+            <div class="form-group" style="margin-bottom: 0;">
+                <label for="language">Language</label>
+                <select name="language" id="language" style="padding: 8px; border-radius: 5px; border: 1px solid #ddd;">
+                    <option value="" {% if not request.args.get('language') %}selected{% endif %}>All Languages</option>
+                    {% for lang in languages %}
+                    <option value="{{ lang }}" {% if lang == request.args.get('language') %}selected{% endif %}>{{ lang }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="form-group" style="margin-bottom: 0;">
+                <label for="sort">Sort By</label>
+                <select name="sort" id="sort" style="padding: 8px; border-radius: 5px; border: 1px solid #ddd;">
+                    <option value="title" {% if request.args.get('sort', 'title') == 'title' %}selected{% endif %}>Title</option>
+                    <option value="year" {% if request.args.get('sort') == 'year' %}selected{% endif %}>Year</option>
+                    <option value="status" {% if request.args.get('sort') == 'status' %}selected{% endif %}>Status</option>
+                </select>
+            </div>
+            
+            <div class="form-group" style="margin-bottom: 0;">
+                <label for="order">Order</label>
+                <select name="order" id="order" style="padding: 8px; border-radius: 5px; border: 1px solid #ddd;">
+                    <option value="asc" {% if request.args.get('order', 'asc') == 'asc' %}selected{% endif %}>A → Z</option>
+                    <option value="desc" {% if request.args.get('order') == 'desc' %}selected{% endif %}>Z → A</option>
+                </select>
+            </div>
+            
+            <div style="display: flex; gap: 10px;">
+                <button type="submit" class="btn btn-primary">Apply</button>
+                <a href="{{ url_for('index') }}" class="btn btn-secondary">Clear</a>
+            </div>
+        </div>
+    </form>
+</div>
+
+<p style="margin-bottom: 15px; color: #666;">Showing {{ books|length }} book{{ 's' if books|length != 1 else '' }}</p>
+
+{% if books %}
+    <div class="book-grid">
+        {% for book in books %}
+            <div class="book-card status-{{ book.reading_status }}">
+                <h3><a href="{{ url_for('view_book', id=book.id) }}">{{ book.title }}</a></h3>
+                <p class="author">{{ book.authors_display }}</p>
+                <div class="meta">
+                    {% if book.publication_year %}
+                        <span>{{ book.publication_year }}</span>
+                    {% endif %}
+                    {% if book.publisher %}
+                        <span>• {{ book.publisher.name }}</span>
+                    {% endif %}
+                    <br>
+                    <span class="badge badge-status-{{ book.reading_status }}">
+                        {{ book.reading_status_display }}
+                    </span>
+                </div>
+                <div class="actions">
+                    <form action="{{ url_for('toggle_read', id=book.id) }}" method="post" style="display:inline;">
+                        <button type="submit" class="btn btn-sm {{ 'btn-secondary' if book.reading_status == 'read' else 'btn-success' }}">
+                            {{ 'Mark Unread' if book.reading_status == 'read' else 'Mark Read' }}
+                        </button>
+                    </form>
+                    <a href="{{ url_for('edit_book', id=book.id) }}" class="btn btn-sm btn-primary">Edit</a>
+                    <form action="{{ url_for('delete_book', id=book.id) }}" method="post" style="display:inline;"
+                          onsubmit="return confirm('Are you sure you want to delete this book?');">
+                        <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                    </form>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="empty-state">
+        <h3>No books found</h3>
+        <p>{% if request.args.get('query') or request.args.getlist('status_filter') %}
+            Try adjusting your search criteria.
+        {% else %}
+            Start building your collection by adding your first book!
+        {% endif %}</p>
+        <br>
+        <a href="{{ url_for('add_book') }}" class="btn btn-primary">Add Your First Book</a>
+    </div>
+{% endif %}
+
+<script>
+// Read Next Widget functionality
+document.addEventListener('DOMContentLoaded', function() {
+    loadReadingQueue();
+});
+
+function loadReadingQueue() {
+    fetch('/api/reading-queue?limit=3')
+        .then(response => response.json())
+        .then(queues => {
+            ['physical', 'ebook', 'audiobook'].forEach(format => {
+                const container = document.querySelector(`#queue-${format} .read-next-books`);
+                const books = queues[format] || [];
+                
+                if (books.length === 0) {
+                    container.innerHTML = '<p class="empty">Empty</p>';
+                    return;
+                }
+                
+                container.innerHTML = books.map(book => `
+                    <div class="read-next-card" data-book-id="${book.id}">
+                        <div class="read-next-position">${book.position}</div>
+                        <div class="read-next-info">
+                            <h4><a href="/book/${book.id}">${book.title}</a></h4>
+                            <p class="author">${book.authors}</p>
+                        </div>
+                        <div class="read-next-actions">
+                            <button class="btn btn-success btn-sm" onclick="finishBook(${book.id}, '${format}')" title="Finished">✓</button>
+                            <button class="btn btn-secondary btn-sm" onclick="skipBook(${book.id}, '${format}')" title="Skip">↓</button>
+                            <button class="btn btn-danger btn-sm" onclick="dnfBook(${book.id}, '${format}')" title="DNF">✗</button>
+                        </div>
+                    </div>
+                `).join('');
+            });
+        })
+        .catch(error => {
+            console.error('Error loading reading queue:', error);
+        });
+}
+
+function finishBook(bookId, format) {
+    if (!confirm('Mark this book as finished?')) return;
+    
+    fetch(`/api/reading-queue/${bookId}/finish?format=${format}`, { method: 'POST' })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                loadReadingQueue();
+                setTimeout(() => location.reload(), 500);
+            }
+        })
+        .catch(error => console.error('Error:', error));
+}
+
+function dnfBook(bookId, format) {
+    if (!confirm('Mark this book as DNF (Did Not Finish)?')) return;
+    
+    fetch(`/api/reading-queue/${bookId}/dnf?format=${format}`, { method: 'POST' })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                loadReadingQueue();
+                setTimeout(() => location.reload(), 500);
+            }
+        })
+        .catch(error => console.error('Error:', error));
+}
+
+function skipBook(bookId, format) {
+    fetch(`/api/reading-queue/${bookId}/skip?format=${format}`, { method: 'POST' })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                loadReadingQueue();
+            }
+        })
+        .catch(error => console.error('Error:', error));
+}
+</script>
+{% endblock %}

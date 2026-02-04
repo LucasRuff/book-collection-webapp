@@ -1,0 +1,255 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }} - My Book Collection{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>{{ title }}</h2>
+    <br>
+    <form method="post">
+        {{ form.hidden_tag() }}
+        
+        <div class="form-group">
+            {{ form.title.label }}
+            {{ form.title(placeholder="Enter book title") }}
+            {% for error in form.title.errors %}
+                <span style="color: red; font-size: 13px;">{{ error }}</span>
+            {% endfor %}
+        </div>
+        
+        <div class="form-group">
+            <label>Authors</label>
+            <div class="author-search-container">
+                <div class="selected-authors" id="selectedAuthors">
+                    <!-- Selected authors will appear here as tags -->
+                </div>
+                <input type="text" class="author-search-input" id="authorSearch" 
+                       placeholder="Search for authors or type a new name..." autocomplete="off">
+                <div class="author-suggestions" id="authorSuggestions"></div>
+            </div>
+            <input type="hidden" name="author_ids" id="authorIds" value="{{ selected_author_ids|default('') }}">
+            <p class="help-text">Search existing authors or type a new name and press Enter to add.</p>
+        </div>
+        
+        <div class="form-group">
+            {{ form.publisher.label }}
+            {{ form.publisher() }}
+            {% for error in form.publisher.errors %}
+                <span style="color: red; font-size: 13px;">{{ error }}</span>
+            {% endfor %}
+        </div>
+        
+        <div class="form-group">
+            {{ form.new_publisher.label }}
+            {{ form.new_publisher(placeholder="Enter new publisher name") }}
+            <p class="help-text">If the publisher isn't in the list above, enter it here.</p>
+            {% for error in form.new_publisher.errors %}
+                <span style="color: red; font-size: 13px;">{{ error }}</span>
+            {% endfor %}
+        </div>
+        
+        <div class="form-group">
+            {{ form.publication_year.label }}
+            {{ form.publication_year(placeholder="e.g., 2020") }}
+            {% for error in form.publication_year.errors %}
+                <span style="color: red; font-size: 13px;">{{ error }}</span>
+            {% endfor %}
+        </div>
+        
+        <div class="form-group">
+            {{ form.isbn.label }}
+            {{ form.isbn(placeholder="ISBN (optional)") }}
+            {% for error in form.isbn.errors %}
+                <span style="color: red; font-size: 13px;">{{ error }}</span>
+            {% endfor %}
+        </div>
+        
+        <div class="form-group">
+            {{ form.reading_status.label }}
+            {{ form.reading_status() }}
+            {% for error in form.reading_status.errors %}
+                <span style="color: red; font-size: 13px;">{{ error }}</span>
+            {% endfor %}
+        </div>
+        
+        <div class="form-group">
+            {{ form.ownership_status.label }}
+            {{ form.ownership_status() }}
+            {% for error in form.ownership_status.errors %}
+                <span style="color: red; font-size: 13px;">{{ error }}</span>
+            {% endfor %}
+        </div>
+        
+        <div class="form-group">
+            <label>{{ form.formats.label.text }}</label>
+            <div style="display: flex; gap: 20px; margin-top: 5px;">
+                {% for value, label in form.formats.choices %}
+                <label style="display: flex; align-items: center; gap: 5px; font-weight: normal; cursor: pointer;">
+                    <input type="checkbox" name="formats" value="{{ value }}" 
+                           {% if value in form.formats.data %}checked{% endif %}>
+                    {{ label }}
+                </label>
+                {% endfor %}
+            </div>
+            {% for error in form.formats.errors %}
+                <span style="color: red; font-size: 13px;">{{ error }}</span>
+            {% endfor %}
+        </div>
+        
+        <div class="form-group">
+            {{ form.language.label }}
+            {{ form.language(placeholder="e.g., English, Spanish, German...") }}
+            {% for error in form.language.errors %}
+                <span style="color: red; font-size: 13px;">{{ error }}</span>
+            {% endfor %}
+        </div>
+        
+        <div class="form-group">
+            {{ form.notes.label }}
+            {{ form.notes(placeholder="Any notes about this book...") }}
+            {% for error in form.notes.errors %}
+                <span style="color: red; font-size: 13px;">{{ error }}</span>
+            {% endfor %}
+        </div>
+        
+        <div style="display: flex; gap: 10px;">
+            {{ form.submit(class="btn btn-primary") }}
+            <a href="{{ url_for('index') }}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<script>
+(function() {
+    const searchInput = document.getElementById('authorSearch');
+    const suggestionsDiv = document.getElementById('authorSuggestions');
+    const selectedDiv = document.getElementById('selectedAuthors');
+    const hiddenInput = document.getElementById('authorIds');
+    
+    // Track selected authors: {id: name} for existing, {name: null} for new
+    let selectedAuthors = {};
+    let newAuthors = [];
+    
+    // Initialize with existing authors (for edit mode)
+    {% if book and book.authors %}
+    {% for author in book.authors %}
+    selectedAuthors[{{ author.id }}] = "{{ author.name }}";
+    {% endfor %}
+    updateDisplay();
+    {% endif %}
+    
+    function updateDisplay() {
+        // Update tags display
+        selectedDiv.innerHTML = '';
+        
+        // Existing authors
+        for (const [id, name] of Object.entries(selectedAuthors)) {
+            const tag = document.createElement('span');
+            tag.className = 'author-tag';
+            tag.innerHTML = `${name} <button type="button" onclick="removeAuthor(${id})">&times;</button>`;
+            selectedDiv.appendChild(tag);
+        }
+        
+        // New authors
+        newAuthors.forEach((name, idx) => {
+            const tag = document.createElement('span');
+            tag.className = 'author-tag';
+            tag.style.background = '#28a745';
+            tag.innerHTML = `${name} (new) <button type="button" onclick="removeNewAuthor(${idx})">&times;</button>`;
+            selectedDiv.appendChild(tag);
+        });
+        
+        // Update hidden input
+        const existingIds = Object.keys(selectedAuthors).join(',');
+        const newNames = newAuthors.join('|||');
+        hiddenInput.value = existingIds + (newNames ? ':::' + newNames : '');
+    }
+    
+    // Make remove functions global
+    window.removeAuthor = function(id) {
+        delete selectedAuthors[id];
+        updateDisplay();
+    };
+    
+    window.removeNewAuthor = function(idx) {
+        newAuthors.splice(idx, 1);
+        updateDisplay();
+    };
+    
+    let debounceTimer;
+    searchInput.addEventListener('input', function() {
+        clearTimeout(debounceTimer);
+        const query = this.value.trim();
+        
+        if (query.length < 1) {
+            suggestionsDiv.classList.remove('show');
+            return;
+        }
+        
+        debounceTimer = setTimeout(() => {
+            fetch(`/api/authors/search?q=${encodeURIComponent(query)}`)
+                .then(r => r.json())
+                .then(authors => {
+                    suggestionsDiv.innerHTML = '';
+                    
+                    // Filter out already selected
+                    const filtered = authors.filter(a => !selectedAuthors[a.id]);
+                    
+                    if (filtered.length === 0) {
+                        suggestionsDiv.innerHTML = `<div class="author-suggestion no-results">Press Enter to add "${query}" as new author</div>`;
+                    } else {
+                        filtered.forEach(author => {
+                            const div = document.createElement('div');
+                            div.className = 'author-suggestion';
+                            div.textContent = author.name;
+                            div.onclick = () => {
+                                selectedAuthors[author.id] = author.name;
+                                updateDisplay();
+                                searchInput.value = '';
+                                suggestionsDiv.classList.remove('show');
+                            };
+                            suggestionsDiv.appendChild(div);
+                        });
+                    }
+                    
+                    suggestionsDiv.classList.add('show');
+                });
+        }, 200);
+    });
+    
+    // Add new author on Enter
+    searchInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            const name = this.value.trim();
+            if (name && !newAuthors.includes(name)) {
+                // Check if it's not already in selected
+                const exists = Object.values(selectedAuthors).some(
+                    n => n.toLowerCase() === name.toLowerCase()
+                );
+                if (!exists) {
+                    newAuthors.push(name);
+                    updateDisplay();
+                }
+            }
+            this.value = '';
+            suggestionsDiv.classList.remove('show');
+        }
+    });
+    
+    // Hide suggestions when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!searchInput.contains(e.target) && !suggestionsDiv.contains(e.target)) {
+            suggestionsDiv.classList.remove('show');
+        }
+    });
+    
+    // Show suggestions on focus if there's text
+    searchInput.addEventListener('focus', function() {
+        if (this.value.trim().length >= 1) {
+            this.dispatchEvent(new Event('input'));
+        }
+    });
+})();
+</script>
+{% endblock %}

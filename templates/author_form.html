@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }} - My Book Collection{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>{{ title }}</h2>
+    <br>
+    <form method="post">
+        {{ form.hidden_tag() }}
+        
+        <div class="form-group">
+            {{ form.name.label }}
+            {{ form.name(placeholder="Enter author name") }}
+            {% for error in form.name.errors %}
+                <span style="color: red; font-size: 13px;">{{ error }}</span>
+            {% endfor %}
+        </div>
+        
+        <div style="display: flex; gap: 10px;">
+            {{ form.submit(class="btn btn-primary") }}
+            {% if author %}
+            <a href="{{ url_for('view_author', id=author.id) }}" class="btn btn-secondary">Cancel</a>
+            {% else %}
+            <a href="{{ url_for('authors') }}" class="btn btn-secondary">Cancel</a>
+            {% endif %}
+        </div>
+    </form>
+</div>
+{% endblock %}
