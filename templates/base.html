@@ -17,14 +17,6 @@
             color: #333;
             line-height: 1.6;
         }
-
-        a {
-            color: #222;
-        }
-
-        a:hover {
-            color: #000;
-        }
         
         .container {
             max-width: 1200px;
@@ -33,8 +25,8 @@
         }
         
         header {
-            background: #eeeeee;
-            color: #222;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
             padding: 20px 0;
             margin-bottom: 30px;
         }
@@ -50,7 +42,7 @@
         }
         
         nav a {
-            color: #222;
+            color: white;
             text-decoration: none;
             margin-left: 20px;
             padding: 8px 16px;
@@ -63,27 +55,23 @@
         }
         
         .btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
+            display: inline-block;
             padding: 10px 20px;
             border: none;
             border-radius: 5px;
             cursor: pointer;
             text-decoration: none;
             font-size: 14px;
-            min-height: 38px;
-            line-height: 1;
             transition: all 0.3s;
         }
         
         .btn-primary {
-            background: #222;
+            background: #667eea;
             color: white;
         }
         
         .btn-primary:hover {
-            background: #000;
+            background: #5a6fd6;
         }
         
         .btn-secondary {
@@ -105,12 +93,12 @@
         }
         
         .btn-success {
-            background: #2e7d32;
+            background: #28a745;
             color: white;
         }
         
         .btn-success:hover {
-            background: #256628;
+            background: #218838;
         }
         
         .btn-sm {
@@ -185,8 +173,8 @@
         .form-group textarea:focus,
         .form-group select:focus {
             outline: none;
-            border-color: #333;
-            box-shadow: 0 0 0 2px rgba(0,0,0,0.1);
+            border-color: #667eea;
+            box-shadow: 0 0 0 2px rgba(102,126,234,0.2);
         }
         
         .form-group textarea {
@@ -233,7 +221,7 @@
         .stat-card .number {
             font-size: 2rem;
             font-weight: bold;
-            color: #2e7d32;
+            color: #667eea;
         }
         
         .stat-card .label {
@@ -254,8 +242,6 @@
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
             position: relative;
             transition: transform 0.2s;
-            display: flex;
-            flex-direction: column;
         }
         
         .book-card:hover {
@@ -263,7 +249,7 @@
         }
         
         .book-card.read {
-            border-left: 4px solid #2e7d32;
+            border-left: 4px solid #28a745;
         }
         
         .book-card.unread {
@@ -281,7 +267,7 @@
         }
         
         .book-card h3 a:hover {
-            color: #000;
+            color: #667eea;
         }
         
         .book-card .author {
@@ -300,7 +286,6 @@
             display: flex;
             gap: 10px;
             flex-wrap: wrap;
-            margin-top: auto;
         }
         
         .badge {
@@ -324,8 +309,8 @@
         
         /* Reading status badges */
         .badge-status-read {
-            background: #dff0e1;
-            color: #1b5e20;
+            background: #d4edda;
+            color: #155724;
         }
         
         .badge-status-to_read {
@@ -360,12 +345,12 @@
         
         /* Read Next Widget */
         .read-next-widget {
-            background: #e0e0e0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             border-radius: 12px;
             padding: 25px;
             margin-bottom: 30px;
-            color: #222;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+            color: white;
+            box-shadow: 0 4px 15px rgba(102,126,234,0.3);
             overflow: hidden;
         }
         
@@ -389,7 +374,7 @@
             margin: 0 0 12px 0;
             font-size: 1.1rem;
             opacity: 0.9;
-            border-bottom: 1px solid rgba(0,0,0,0.15);
+            border-bottom: 1px solid rgba(255,255,255,0.2);
             padding-bottom: 8px;
         }
         
@@ -408,24 +393,23 @@
         }
         
         .read-next-card {
-            background: #ffffff;
-            border: 1px solid #d3d3d3;
+            background: rgba(255,255,255,0.15);
+            backdrop-filter: blur(10px);
             border-radius: 8px;
             padding: 12px;
             display: flex;
             align-items: flex-start;
             gap: 10px;
-            transition: background 0.2s, border-color 0.2s;
+            transition: background 0.2s;
             overflow: hidden;
         }
         
         .read-next-card:hover {
-            background: #f4f4f4;
-            border-color: #c4c4c4;
+            background: rgba(255,255,255,0.25);
         }
         
         .read-next-position {
-            background: #dddddd;
+            background: rgba(255,255,255,0.3);
             width: 24px;
             height: 24px;
             border-radius: 50%;
@@ -452,7 +436,7 @@
         }
         
         .read-next-info h4 a {
-            color: #222;
+            color: white;
             text-decoration: none;
         }
         
@@ -481,33 +465,6 @@
             border: none;
             cursor: pointer;
             min-width: 24px;
-        }
-
-        .read-next-actions .btn-success {
-            background: #2e7d32;
-            color: white;
-        }
-
-        .read-next-actions .btn-success:hover {
-            background: #256628;
-        }
-
-        .read-next-actions .btn-secondary {
-            background: #546e7a;
-            color: white;
-        }
-
-        .read-next-actions .btn-secondary:hover {
-            background: #455a64;
-        }
-
-        .read-next-actions .btn-danger {
-            background: #b23b3b;
-            color: white;
-        }
-
-        .read-next-actions .btn-danger:hover {
-            background: #983232;
         }
         
         @media (max-width: 900px) {
@@ -629,7 +586,7 @@
             display: inline-flex;
             align-items: center;
             gap: 5px;
-            background: #333;
+            background: #667eea;
             color: white;
             padding: 5px 10px;
             border-radius: 15px;
@@ -661,8 +618,8 @@
         
         .author-search-input:focus {
             outline: none;
-            border-color: #333;
-            box-shadow: 0 0 0 2px rgba(0,0,0,0.1);
+            border-color: #667eea;
+            box-shadow: 0 0 0 2px rgba(102,126,234,0.2);
         }
         
         .author-suggestions {
